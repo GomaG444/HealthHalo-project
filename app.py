@@ -10,7 +10,8 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# there was a key here
+openai.api_key = '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'
+app.secret_key = 'supersecretkey'
 
 # Home route
 @app.route('/')
