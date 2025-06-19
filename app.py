@@ -10,7 +10,7 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# keys were here and removed because I was unable to push with the keys
+# there was a key here
 
 # Home route
 @app.route('/')
