@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+<<<<<<< HEAD
     <div class="container">
         <div class="header">
             <img src="{{ url_for('static', filename='images/heart.png') }}" alt="Heart Icon">
@@ -48,6 +49,20 @@
         <div class="card">
             <img src="{{ url_for('static', filename='images/smiling.png') }}" alt="Chat Icon">
             <h2>Hi! How are you feeling today?</h2>
+=======
+    <div id="container">
+        <h1>HealthHalo AI</h1>
+        <!-- Webcam and image recognition elements -->
+        <div id="webcam-container"></div>
+        <div id="label-container"></div>
+        <button onclick="init()">Start Webcam</button>
+
+        <!-- Chat interface -->
+        <div id="chat-container"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+>>>>>>> 34c67359e147a2aecd2f6437f4c0da6bbda50ae0
         </div>
     </div>
 </body>
