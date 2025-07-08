@@ -1,30 +1,54 @@
+
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animal Chat</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <title>HealthHalo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div id="container">
-        <h1>AI Animal Chat</h1>
-        <!-- Webcam and image recognition elements -->
-        <div id="webcam-container"></div>
-        <div id="label-container"></div>
-        <button onclick="init()">Start Webcam</button>
-
-        <!-- Chat interface -->
-        <div id="chat-container"></div>
-        <div id="input-container">
-            <input type="text" id="user-input" placeholder="Type your message...">
-            <button onclick="sendMessage()">Send</button>
+    <div class="container">
+        <div class="header">
+            <img src="{{ url_for('static', filename='images/heart.png') }}" alt="Heart Icon">
+            <h1>HealthHalo</h1>
+            <p>Personalized AI-Driven Heart Disease Monitoring</p>
+        </div>
+        <div class="nav">
+            <button>Dashboard</button>
+            <button>Upload Data</button>
+            <button>Chat with AI</button>
+        </div>
+        <div class="card">
+            <img src="{{ url_for('static', filename='images/brain.png') }}" alt="ML Icon">
+            <h2>ML Risk Prediction</h2>
+            <p>Your readmission risk score is 0.19 - High.</p>
+        </div>
+        <div class="card">
+            <img src="{{ url_for('static', filename='images/heartbeat.png') }}" alt="LSTM Icon">
+            <h2>LSTM Analysis</h2>
+            <p>Irregular heart rate patterns detected 3x in the past week</p>
+        </div>
+        <div class="card">
+            <img src="{{ url_for('static', filename='images/chat.png') }}" alt="LLM Icon">
+            <h2>LLM Summary</h2>
+            <p>Patient reports increased fatigue and missed medication yesterday</p>
+        </div>
+        <div class="card">
+            <img src="{{ url_for('static', filename='images/upload.png') }}" alt="Upload Icon">
+            <h2>Upload Data</h2>
+            <p>Upload Wearable File (.npy) / Electronic Health Record (.csv)</p>
+        </div>
+        <div class="card">
+            <img src="{{ url_for('static', filename='images/document.png') }}" alt="Reports Icon">
+            <h2>Reports</h2>
+            <p>Risk Score Trend (ML): Rising / HR Pattern Flags (LSTM): Detected 2 anomalies / Recent Symptoms (LLM): Fatigue, missed meds</p>
+        </div>
+        <div class="card">
+            <img src="{{ url_for('static', filename='images/smiling.png') }}" alt="Chat Icon">
+            <h2>Hi! How are you feeling today?</h2>
         </div>
     </div>
-
-    <!-- Required scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
