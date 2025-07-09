@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-<<<<<<< HEAD
     <div class="container">
         <div class="header">
             <img src="{{ url_for('static', filename='images/heart.png') }}" alt="Heart Icon">
@@ -19,7 +18,7 @@
         <div class="nav">
             <button>Dashboard</button>
             <button>Upload Data</button>
-            <button>Chat with AI</button>
+            <a href="{{ url_for('chatbot') }}">Chat with AI</a>
         </div>
         <div class="card">
             <img src="{{ url_for('static', filename='images/brain.png') }}" alt="ML Icon">
@@ -39,7 +38,7 @@
         <div class="card">
             <img src="{{ url_for('static', filename='images/upload.png') }}" alt="Upload Icon">
             <h2>Upload Data</h2>
-            <p>Upload Wearable File (.npy) / Electronic Health Record (.csv)</p>
+            <p>Electronic Health Record (.csv)</p>
         </div>
         <div class="card">
             <img src="{{ url_for('static', filename='images/document.png') }}" alt="Reports Icon">
@@ -49,21 +48,25 @@
         <div class="card">
             <img src="{{ url_for('static', filename='images/smiling.png') }}" alt="Chat Icon">
             <h2>Hi! How are you feeling today?</h2>
-=======
-    <div id="container">
-        <h1>HealthHalo AI</h1>
-        <!-- Webcam and image recognition elements -->
-        <div id="webcam-container"></div>
-        <div id="label-container"></div>
-        <button onclick="init()">Start Webcam</button>
-
-        <!-- Chat interface -->
-        <div id="chat-container"></div>
-        <div id="input-container">
-            <input type="text" id="user-input" placeholder="Type your message...">
-            <button onclick="sendMessage()">Send</button>
->>>>>>> 34c67359e147a2aecd2f6437f4c0da6bbda50ae0
         </div>
     </div>
 </body>
 </html>
+        <!--
+    <div id="container">
+        <h1>HealthHalo AI</h1>
+        Webcam and image recognition elements 
+        <div id="webcam-container"></div>
+        <div id="label-container"></div>
+        <button onclick="init()">Start Webcam</button>
+    
+        Chat interface 
+        <div id="chat-container"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</body>
+</html>
+-->
