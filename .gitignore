@@ -1,0 +1,13 @@
+# Ignore flask session folders
+flask_session/
+HealthHalo-project/flask_session/
+
+# Ignore secrets file
+secrets.txt
+
+# Python related ignores (optional)
+__pycache__/
+*.pyc
+*.pyo
+
+
