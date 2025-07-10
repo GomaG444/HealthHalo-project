@@ -1,51 +1,51 @@
- <!-- templates/chatbot.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HealthHalo Chatbot</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="{{ url_for('static', filename='images/chat.png') }}" alt="Chat Icon">
-            <h1>HealthHalo Chatbot</h1>
-            <p>Interact with our AI assistant</p>
-        </div>
-    </div>
-    <div class="chat-container">
-        <div class="chat-messages" id="chatMessages">
-            <!-- Messages will be added here dynamically later -->
-        </div>
-        <div class="chat-input">
-            <input type="text" id="chatInput" placeholder="Type your message...">
-            <button onclick="sendMessage()">Send</button>
-        </div>
-        <a href="{{ url_for('dashboard') }}" class="back-button">Back to Dashboard</a>
-    </div>
-
-    <script>
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const messages = document.getElementById('chatMessages');
-            const message = input.value.trim();
-            if (message) {
-                messages.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
-                messages.scrollTop = messages.scrollHeight;
-                input.value = '';
-                setTimeout(() => {
-                    messages.innerHTML += `<p><strong>AI:</strong> I'm here to help! (This is a placeholder response.)</p>`;
-                    messages.scrollTop = messages.scrollHeight;
-                }, 500);
+<script>
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const messages = document.getElementById('chatMessages');
+        const userMessage = input.value.trim();
+        if (!userMessage) return;
+    
+        // Show user's message
+        messages.innerHTML += `<p><strong>You:</strong> ${userMessage}</p>`;
+        messages.scrollTop = messages.scrollHeight;
+        input.value = '';
+    
+        // Prepare features to send to backend
+        // TODO: Replace this with real feature extraction from userMessage
+        const exampleFeatures = {
+            age: 50,
+            sex: 1,
+            cholesterol: 230,
+            blood_pressure: 120
+        };
+    
+        try {
+            // Send POST request to /predict with example features
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ features: exampleFeatures })
+            });
+    
+            const data = await response.json();
+    
+            if (response.ok) {
+                // Show AI prediction from ML model
+                messages.innerHTML += `<p><strong>AI:</strong> Predicted class: ${data.predicted_class}, Risk score: ${data.risk_score.toFixed(2)}</p>`;
+            } else {
+                messages.innerHTML += `<p><strong>AI:</strong> Error: ${data.error}</p>`;
             }
+        } catch (error) {
+            messages.innerHTML += `<p><strong>AI:</strong> Failed to get response.</p>`;
         }
-        document.getElementById('chatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
+    
+        messages.scrollTop = messages.scrollHeight;
+    }
+    
+    document.getElementById('chatInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
     </script>
-</body>
-</html>
+    
