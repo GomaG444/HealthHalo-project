@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,7 +21,7 @@
     <!-- Nav Tabs -->
     <div class="flex justify-around mb-5 text-sm font-medium text-blue-700">
       <span class="border-b-2 border-blue-600 pb-1">Dashboard</span>
-      <a href="#" class="hover:underline">Upload Data</a>
+      <a href="{{ url_for('handle_upload') }}" class="hover:underline">Upload Data</a>
       <a href="{{ url_for('chatbot') }}" class="hover:underline">Chat with AI</a>
     </div>
 
@@ -46,20 +43,25 @@
       <p class="text-sm">Irregular heart rate patterns detected <strong>3×</strong> in the past week.</p>
     </div>
 
-    <!-- Card: LLM Summary -->
+    <!-- Card: LLM Summary (dynamic) -->
     <div class="bg-gray-100 rounded-xl p-4 mb-4">
       <div class="flex items-center gap-2 mb-1">
         <span class="text-blue-700">💬</span>
         <h2 class="font-semibold text-gray-800">LLM Summary</h2>
       </div>
-      <p class="text-sm">Patient reports increased fatigue and missed medication yesterday.</p>
+      <!-- Preserve line-breaks that may come from OpenAI -->
+      <p class="text-sm whitespace-pre-line">{{ llm_summary }}</p>
     </div>
 
-    <!-- Upload Section -->
+    <!-- Upload Section (quick link) -->
     <div class="grid grid-cols-2 gap-4 mb-4">
       <div>
         <h3 class="text-sm font-semibold mb-1">⬆ Upload Data</h3>
-        <button class="text-xs bg-white border rounded-md px-2 py-1 w-full mt-1 hover:bg-gray-100">Upload EHR (.csv)</button>
+        <a href="{{ url_for('handle_upload') }}">
+          <button class="text-xs bg-white border rounded-md px-2 py-1 w-full mt-1 hover:bg-gray-100">
+            Upload EHR (.csv)
+          </button>
+        </a>
       </div>
       <div>
         <h3 class="text-sm font-semibold mb-1">📋 Reports</h3>
@@ -71,7 +73,7 @@
       </div>
     </div>
 
-    <!-- Check-in Prompt (Now a Link to Chatbot) -->
+    <!-- Check-in Prompt -->
     <a href="{{ url_for('chatbot') }}" class="block">
       <div class="bg-blue-50 rounded-xl p-3 text-center hover:bg-blue-100 transition-colors duration-200">
         <p class="text-blue-800 font-medium">😐 Hi! How are you feeling today?</p>
@@ -81,4 +83,3 @@
   </div>
 </body>
 </html>
-

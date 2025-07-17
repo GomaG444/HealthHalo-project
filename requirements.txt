@@ -18,3 +18,8 @@ six==1.17.0
 threadpoolctl==3.6.0
 tzdata==2025.2
 zipp==3.23.0
+
+# ── added for new functionality ───────────────────────────
+flask==3.0.2
+python-dotenv==1.0.1
+openai==1.24.0

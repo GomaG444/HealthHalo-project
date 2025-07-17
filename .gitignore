@@ -1,14 +1,23 @@
-# Ignore flask session folders
+# ───── Runtime/session artefacts ──────────────────────────
 flask_session/
 HealthHalo-project/flask_session/
 
-# Ignore secrets file
+# ───── Environment / secrets ──────────────────────────────
+.env
+.env.*          # e.g. .env.local, .env.prod
 secrets.txt
+key.env         # legacy
 
-# Python related ignores (optional)
+# ───── User-uploaded data & generated outputs ─────────────
+uploads/
+summaries/
+
+# ───── Python build artefacts ─────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
 
-#ignore api key
-key.env
+# ───── Misc ───────────────────────────────────────────────
+# (uncomment if you’re on macOS or VS Code)
+# .DS_Store
+# .vscode/
