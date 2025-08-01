@@ -1,16 +1,16 @@
 # ───── Runtime/session artefacts ──────────────────────────
-flask_session/
-HealthHalo-project/flask_session/
+# flask_session/
 
 # ───── Environment / secrets ──────────────────────────────
 .env
-.env.*          # e.g. .env.local, .env.prod
+.env.* # e.g. .env.local, .env.prod
 secrets.txt
 key.env         # legacy
 
 # ───── User-uploaded data & generated outputs ─────────────
 uploads/
 summaries/
+*.json          # This will ignore any JSON files in the root folder, like your latest.json file.
 
 # ───── Python build artefacts ─────────────────────────────
 __pycache__/
@@ -19,5 +19,8 @@ __pycache__/
 
 # ───── Misc ───────────────────────────────────────────────
 # (uncomment if you’re on macOS or VS Code)
-# .DS_Store
+.DS_Store
 # .vscode/
+
+# ───── Python virtual environment ─────────────────────────
+venv/

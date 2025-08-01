@@ -1,5 +1,3 @@
-# app.py (complete and final version)
-
 import os
 from datetime import datetime
 import pandas as pd
@@ -36,9 +34,18 @@ def latest_summary_fallback():
     path = os.path.join(SUMMARY_DIR, "latest.json")
     if os.path.exists(path):
         with open(path, "r") as fp:
-            return json.load(fp)
+            data = json.load(fp)
+            # Ensure 'lstm_summary' key exists, provide default if missing
+            if "lstm_summary" not in data:
+                data["lstm_summary"] = "No recent health trends available."
+            return data
     # Return a default empty state
-    return {"summary": "No recent summary yet.", "risk_score": None, "predicted_class": None}
+    return {
+        "summary": "No recent summary yet.",
+        "risk_score": None,
+        "predicted_class": None,
+        "lstm_summary": "No recent health trends available."
+    }
 
 def load_ml_model():
     """Load the trained ML pipeline model."""
@@ -63,6 +70,9 @@ model = load_ml_model()
 def dashboard():
     """Dashboard page with latest data injected for initial page load."""
     summary_data = latest_summary_fallback()
+    
+    # You can dynamically update or generate lstm_summary here if you want
+    # For now, it uses the stored value or default from latest_summary_fallback
     return render_template("index.html", data=summary_data)
 
 @app.route("/upload", methods=["GET", "POST"])
@@ -110,16 +120,16 @@ def handle_upload():
         avg_risk_score = round(risk_probs.mean() * 100, 2)
         avg_pred_class = 1 if avg_risk_score > 50 else 0 # A simple threshold for high/low
 
-        # --- Update: Save to the same JSON file as the chatbot ---
+        # Save to the same JSON file as the chatbot, add placeholder lstm_summary
         data_to_save = {
             "summary": summary_text,
             "risk_score": avg_risk_score,
-            "predicted_class": avg_pred_class
+            "predicted_class": avg_pred_class,
+            "lstm_summary": "Stable heart rate and blood pressure trends."  # Placeholder text
         }
         path = os.path.join(SUMMARY_DIR, "latest.json")
         with open(path, "w") as fp:
             json.dump(data_to_save, fp)
-        # --- End Update ---
 
         return render_template(
             "upload.html",
@@ -135,14 +145,12 @@ def handle_upload():
 @app.route("/chatbot")
 def chatbot():
     """Chatbot page (passes key to browser JS)."""
-    # Fix: Pass an empty string if the key is not found to prevent template rendering errors.
     key = os.getenv("OPENAI_API_KEY", "")
     return render_template("chatbot.html", openai_api_key=key)
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """API endpoint returning risk score & class from a pre-loaded model.
-    This version correctly handles feature name mapping and provides defaults."""
+    """API endpoint returning risk score & class from a pre-loaded model."""
     if model is None:
         return jsonify({"error": "ML model not loaded."}), 500
 
@@ -153,7 +161,7 @@ def predict():
 
         user_features = data['features']
         
-        # Define the expected features and their default values
+        # Expected features with defaults
         required_features = {
             'age': 55, 'sex': 1, 'cp': 0, 'trestbps': 120, 'chol': 200, 'fbs': 0,
             'restecg': 1, 'thalach': 150, 'exang': 0, 'oldpeak': 1.0, 'slope': 2,
@@ -193,7 +201,8 @@ def save_data():
         summary_data = {
             "summary": summary_text,
             "risk_score": risk_score,
-            "predicted_class": predicted_class
+            "predicted_class": predicted_class,
+            "lstm_summary": "Stable heart rate and blood pressure trends."  # Keep consistent placeholder
         }
         
         path = os.path.join(SUMMARY_DIR, "latest.json")
@@ -210,6 +219,17 @@ def get_latest_data():
     """Returns the latest saved data for real-time dashboard updates."""
     data = latest_summary_fallback()
     return jsonify(data)
+
+# --- New reports page route ---
+@app.route("/reports")
+def reports():
+    # TODO: Replace with live data integration later
+    report_data = {
+        "risk_trend": "⬆ Rising",
+        "hr_flags": 2,
+        "recent_symptoms": "Fatigue, missed meds"
+    }
+    return render_template("reports.html", report=report_data)
 
 
 if __name__ == "__main__":

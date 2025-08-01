@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HealthHalo Reports</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900">
+  <div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-3xl shadow-xl">
+    <h1 class="text-3xl font-bold mb-6 text-blue-900">Health Reports</h1>
+    
+    <div class="mb-4 p-4 bg-blue-100 rounded-lg">
+      <h2 class="text-xl font-semibold">Risk Score Trend</h2>
+      <p class="text-2xl mt-1">{{ report.risk_trend }}</p>
+    </div>
+
+    <div class="mb-4 p-4 bg-yellow-100 rounded-lg">
+      <h2 class="text-xl font-semibold">HR Pattern Flags</h2>
+      <p class="text-2xl mt-1">{{ report.hr_flags }} anomalies</p>
+    </div>
+
+    <div class="mb-4 p-4 bg-red-100 rounded-lg">
+      <h2 class="text-xl font-semibold">Recent Symptoms</h2>
+      <p class="text-2xl mt-1">{{ report.recent_symptoms }}</p>
+    </div>
+
+    <div class="mt-6">
+      <a href="{{ url_for('dashboard') }}" class="text-blue-700 hover:underline">← Back to Dashboard</a>
+    </div>
+  </div>
+</body>
+</html>

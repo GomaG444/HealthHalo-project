@@ -2,112 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HealthHalo Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans">
+<body class="bg-gray-50 font-sans text-gray-900">
+
   <div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-3xl shadow-xl">
 
     <div class="text-center mb-6">
       <div class="flex justify-center items-center gap-2">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" class="h-8" alt="Logo">
-        <h1 class="text-2xl font-bold text-blue-900">HealthHalo</h1>
+        <img src="{{ url_for('static', filename='images/logo.png') }}" class="h-8" alt="Logo" />
+        <h1 class="text-2xl font-bold text-blue-900">HealthHalo Dashboard</h1>
       </div>
-      <p class="text-sm text-gray-600">Personalized AI-Driven Heart Disease Monitoring</p>
+      <p class="text-sm text-gray-600">Your health summary at a glance</p>
     </div>
 
     <div class="flex justify-around mb-5 text-sm font-medium text-blue-700">
-      <span class="border-b-2 border-blue-600 pb-1">Dashboard</span>
+      <a href="{{ url_for('dashboard') }}" class="border-b-2 border-blue-600 pb-1">Dashboard</a>
       <a href="{{ url_for('handle_upload') }}" class="hover:underline">Upload Data</a>
       <a href="{{ url_for('chatbot') }}" class="hover:underline">Chat with AI</a>
+      <a href="{{ url_for('reports') }}" class="hover:underline">Reports</a>
     </div>
 
-    <div id="risk-prediction-card" class="bg-gray-100 rounded-xl p-4 mb-4">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="text-blue-700"></span>
-        <h2 class="font-semibold text-gray-800">ML Risk Prediction</h2>
-      </div>
-      <p class="text-sm" id="prediction-text">Your readmission risk score is <strong>-</strong></p>
+    <div class="mb-4 p-4 bg-gray-100 rounded-lg shadow-inner min-h-[150px]">
+      <h2 class="text-xl font-semibold mb-2">Latest Summary</h2>
+      <p>{{ data.summary }}</p>
     </div>
 
-    <div class="bg-gray-100 rounded-xl p-4 mb-4">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="text-blue-700"></span>
-        <h2 class="font-semibold text-gray-800">LSTM Analysis</h2>
-      </div>
-      <p class="text-sm">Irregular heart rate patterns detected <strong>3×</strong> in the past week.</p>
+    <div class="mb-4 p-4 bg-gray-100 rounded-lg shadow-inner">
+      <h2 class="text-xl font-semibold mb-2">Risk Score</h2>
+      {% if data.risk_score is not none %}
+        <p class="text-lg font-bold">{{ data.risk_score }}%</p>
+      {% else %}
+        <p>No risk score available</p>
+      {% endif %}
     </div>
 
-    <div id="llm-summary-card" class="bg-gray-100 rounded-xl p-4 mb-4">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="text-blue-700"></span>
-        <h2 class="font-semibold text-gray-800">LLM Summary</h2>
-      </div>
-      <p class="text-sm whitespace-pre-line" id="summary-text">Your latest health summary will appear here after your first check-in with the chatbot.</p>
+    <div class="mb-4 p-4 bg-gray-100 rounded-lg shadow-inner">
+      <h2 class="text-xl font-semibold mb-2">Health Trend Summary</h2>
+      <p>{{ data.lstm_summary or "No recent health trends available." }}</p>
     </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <h3 class="text-sm font-semibold mb-1">⬆ Upload Data</h3>
-        <a href="{{ url_for('handle_upload') }}">
-          <button class="text-xs bg-white border rounded-md px-2 py-1 w-full mt-1 hover:bg-gray-100">
-            Upload EHR (.csv)
-          </button>
-        </a>
-      </div>
-      <div>
-        <h3 class="text-sm font-semibold mb-1"> Reports</h3>
-        <ul class="text-xs text-gray-700 space-y-1">
-          <li><strong>Risk Score Trend:</strong> ⬆ Rising</li>
-          <li><strong>HR Pattern Flags:</strong> 2 anomalies</li>
-          <li><strong>Recent Symptoms:</strong> Fatigue, missed meds</li>
-        </ul>
-      </div>
-    </div>
-
-    <a href="{{ url_for('chatbot') }}" class="block">
-      <div class="bg-blue-50 rounded-xl p-3 text-center hover:bg-blue-100 transition-colors duration-200">
-        <p class="text-blue-800 font-medium"> Hi! How are you feeling today?</p>
-      </div>
-    </a>
 
   </div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', fetchLatestData);
-    
-    function fetchLatestData() {
-      fetch('/get_latest_data')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (Object.keys(data).length > 0) {
-            updateDashboard(data);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching latest data:', error);
-        });
-    }
-
-    function updateDashboard(data) {
-      const summaryTextElement = document.getElementById('summary-text');
-      const predictionTextElement = document.getElementById('prediction-text');
-
-      summaryTextElement.innerText = data.summary;
-
-      const riskClassText = data.predicted_class === 1 ? 'High' : 'Low';
-      const riskColorClass = data.predicted_class === 1 ? 'text-red-600' : 'text-green-600';
-      const riskScore = parseFloat(data.risk_score).toFixed(2);
-      
-      predictionTextElement.innerHTML = `Your readmission risk score is <strong>${riskScore}</strong> – <span class="${riskColorClass} font-medium">${riskClassText}</span>.`;
-    }
-  </script>
 
 </body>
 </html>
