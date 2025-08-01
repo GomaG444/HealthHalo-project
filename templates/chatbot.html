@@ -1,201 +1,234 @@
-
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HealthHalo Chat with AI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthHalo Chatbot</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .message-container {
+      display: flex;
+      margin-bottom: 1rem;
+    }
+    .user-message-container {
+      justify-content: flex-end;
+    }
+    .ai-message-container {
+      justify-content: flex-start;
+    }
+    .message {
+      max-width: 75%;
+      padding: 0.75rem 1.25rem;
+      border-radius: 1.5rem;
+    }
+    .user-message {
+      background-color: #3B82F6;
+      color: white;
+      border-bottom-right-radius: 0.25rem;
+    }
+    .ai-message {
+      background-color: #E5E7EB;
+      color: #1F2937;
+      border-bottom-left-radius: 0.25rem;
+    }
+  </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
-  <div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-3xl shadow-xl">
 
-    <!-- Header -->
+  <div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-3xl shadow-xl">
+    
     <div class="text-center mb-6">
       <div class="flex justify-center items-center gap-2">
         <img src="{{ url_for('static', filename='images/logo.png') }}" class="h-8" alt="Logo">
-        <h1 class="text-2xl font-bold text-blue-900">HealthHalo Chat</h1>
+        <h1 class="text-2xl font-bold text-blue-900">HealthHalo AI Chat</h1>
       </div>
-      <p class="text-sm text-gray-600">Your AI-powered health assistant</p>
+      <p class="text-sm text-gray-600">Your virtual health assistant</p>
     </div>
 
-    <!-- Chatbox -->
-    <div class="bg-gray-100 rounded-xl p-4 h-80 overflow-y-auto mb-4" id="chatMessages"></div>
-
-    <!-- Input -->
-    <div class="flex gap-2">
-      <input type="text" id="chatInput" placeholder="Type your message..." class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <button onclick="sendMessage()" class="bg-blue-600 text-white rounded-md px-4 py-2 text-sm hover:bg-blue-700">Send</button>
+    <div class="flex justify-around mb-5 text-sm font-medium text-blue-700">
+      <a href="{{ url_for('dashboard') }}" class="hover:underline">Dashboard</a>
+      <a href="{{ url_for('handle_upload') }}" class="hover:underline">Upload Data</a>
+      <span class="border-b-2 border-blue-600 pb-1">Chat with AI</span>
     </div>
 
-    <!-- Back Button -->
-    <a href="{{ url_for('dashboard') }}" class="block mt-4 text-center text-blue-600 text-sm hover:underline">← Back to Dashboard</a>
+    <div id="chat-window" class="h-96 overflow-y-auto mb-4 p-4 border rounded-xl bg-gray-100">
+      <div class="ai-message-container">
+        <div class="message ai-message">
+          Hello! Please tell me your vitals like this: "age=55, sex=1, cholesterol=200, blood_pressure=120"
+        </div>
+      </div>
+    </div>
+    
+    <div id="ml-prediction-container" class="mb-4 p-3 bg-gray-100 rounded-lg hidden">
+      <p class="font-bold text-gray-700">ML Prediction:</p>
+      <div id="prediction-text" class="text-sm"></div>
+    </div>
+
+    <div class="flex">
+      <input type="text" id="user-input" class="flex-grow p-3 border rounded-l-xl focus:outline-none" placeholder="Enter your vitals..." />
+      <button id="send-button" class="bg-blue-600 text-white px-6 rounded-r-xl hover:bg-blue-700 transition-colors duration-200">
+        Send
+      </button>
+    </div>
+
   </div>
 
- <!-- Chat Script (Dynamic with OpenAI) -->
-<script>
-  let conversationStep = 0;
-  let userData = {};
+  <script>
+    const OPENAI_API_KEY = "{{ openai_api_key }}";
+    const chatWindow = document.getElementById('chat-window');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const mlPredictionContainer = document.getElementById('ml-prediction-container');
+    const predictionText = document.getElementById('prediction-text');
 
-  // Use the API key passed from the Flask app
-  const OPENAI_API_KEY = "{{ openai_api_key }}";
-
-  async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const messages = document.getElementById('chatMessages');
-    const userMessage = input.value.trim();
-    if (!userMessage) return;
-
-    messages.innerHTML += `<p><strong>You:</strong> ${userMessage}</p>`;
-    messages.scrollTop = messages.scrollHeight;
-    input.value = '';
-
-    // Initial prompt to start conversation
-    if (conversationStep === 0) {
-      const prompt = "You are a friendly medical assistant AI. Start a conversation by asking about the user's health.";
-      const aiResponse = await getOpenAIResponse(prompt);
-      messages.innerHTML += `<p><strong>AI:</strong> ${aiResponse}</p>`;
-      conversationStep++;
+    // Display error message if API key is missing
+    if (OPENAI_API_KEY === "") {
+        appendMessage("Error: The OpenAI API key is missing. Please set it in your .env file.", 'ai');
+        sendButton.disabled = true;
     }
-    // Collect symptoms
-    else if (conversationStep === 1) {
-      userData.symptoms = userMessage;
-      const prompt = `You are a medical assistant AI. The user reported these symptoms: "${userData.symptoms}". Ask about their medication usage today.`;
-      const aiResponse = await getOpenAIResponse(prompt);
-      messages.innerHTML += `<p><strong>AI:</strong> ${aiResponse}</p>`;
-      conversationStep++;
-    }
-    // Collect medications
-    else if (conversationStep === 2) {
-      userData.medications = userMessage;
-      const prompt = `You are a medical assistant AI. The user reported these symptoms: "${userData.symptoms}" and medications: "${userData.medications}". Ask about their recent sleep, diet, or activity.`;
-      const aiResponse = await getOpenAIResponse(prompt);
-      messages.innerHTML += `<p><strong>AI:</strong> ${aiResponse}</p>`;
-      conversationStep++;
-    }
-    // Collect lifestyle
-    else if (conversationStep === 3) {
-      userData.lifestyle = userMessage;
-      const prompt = `You are a medical assistant AI. The user reported symptoms: "${userData.symptoms}", medications: "${userData.medications}", and lifestyle: "${userData.lifestyle}". Ask for their vitals in this format: age=55, sex=1, cholesterol=200, blood_pressure=120.`;
-      const aiResponse = await getOpenAIResponse(prompt);
-      messages.innerHTML += `<p><strong>AI:</strong> ${aiResponse}</p>`;
-      conversationStep++;
-    }
-    // Collect vitals and get ML prediction
-    else if (conversationStep === 4) {
-      const features = {};
-      userMessage.split(',').forEach(pair => {
-        const [key, value] = pair.split('=').map(item => item.trim());
-        if (key && value && !isNaN(value)) {
-          features[key] = Number(value);
+    
+    sendButton.addEventListener('click', handleUserInput);
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleUserInput();
         }
-      });
+    });
 
-      if (Object.keys(features).length < 4) {
-        messages.innerHTML += `<p><strong>AI:</strong> Please provide all four vitals correctly (age, sex, cholesterol, blood_pressure).</p>`;
-        return;
-      }
+    function appendMessage(message, sender) {
+        const messageContainer = document.createElement('div');
+        messageContainer.className = `message-container ${sender}-message-container`;
+        
+        const messageBubble = document.createElement('div');
+        messageBubble.className = `message ${sender}-message`;
+        messageBubble.innerText = message;
+        
+        messageContainer.appendChild(messageBubble);
+        chatWindow.appendChild(messageContainer);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
 
-      try {
-        const response = await fetch('/predict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ features })
+    function clearRiskPrediction() {
+        mlPredictionContainer.classList.add('hidden');
+        predictionText.innerHTML = '';
+    }
+
+    function displayRiskPrediction(predClass, riskScore) {
+        const riskClassText = predClass === 1 ? 'High Risk' : 'Low Risk';
+        const riskColor = predClass === 1 ? 'text-red-600' : 'text-green-600';
+        predictionText.innerHTML = `Your risk score is <strong>${riskScore}%</strong>, which is considered <span class="${riskColor} font-bold">${riskClassText}</span>.`;
+        mlPredictionContainer.classList.remove('hidden');
+    }
+
+    function handleUserInput() {
+        const message = userInput.value.trim();
+        if (message === '') return;
+        
+        appendMessage(message, 'user');
+        userInput.value = '';
+        
+        const features = parseVitals(message);
+        if (Object.keys(features).length > 0) {
+            getMLPrediction(features);
+        } else {
+            getLLMSummary(message);
+        }
+    }
+
+    function parseVitals(text) {
+        const features = {};
+        const pairs = text.split(',').map(s => s.trim());
+        pairs.forEach(pair => {
+            const parts = pair.split('=').map(s => s.trim());
+            if (parts.length === 2) {
+            const key = parts[0];
+            const value = parseFloat(parts[1]);
+            if (!isNaN(value)) {
+                features[key] = value;
+            }
+            }
         });
-
-        const data = await response.json();
-        const riskScore = data.risk_score.toFixed(2);
-        const predClass = data.predicted_class;
-
-        const summary = `
-Symptoms: ${userData.symptoms}
-Medications: ${userData.medications}
-Lifestyle: ${userData.lifestyle}
-Vitals: ${JSON.stringify(features)}
-Risk Score: ${riskScore}
-Predicted Class: ${predClass}
-        `;
-
-        messages.innerHTML += `<p><strong>AI:</strong> Processing your data for a detailed summary...</p>`;
-        await getLLMSummary(summary, messages);
-      } catch (error) {
-        messages.innerHTML += `<p><strong>AI:</strong> Failed to get risk score.</p>`;
-      }
-
-      const followUpPrompt = `You are a medical assistant AI. You have this patient data: "${summary}". Ask if they have other questions or want to schedule a check-in.`;
-      const aiResponse = await getOpenAIResponse(followUpPrompt);
-      messages.innerHTML += `<p><strong>AI:</strong> ${aiResponse}</p>`;
-      conversationStep++;
+        return features;
     }
-    // Handle follow-up or end conversation
-    else {
-      const prompt = `You are a medical assistant AI. The user has completed their check-in. End the conversation politely and offer to talk again soon.`;
-      const aiResponse = await getOpenAIResponse(prompt);
-      messages.innerHTML += `<p><strong>AI:</strong> ${aiResponse}</p>`;
+    
+    async function getLLMSummary(userSummary) {
+        if (!OPENAI_API_KEY) {
+            return "Cannot generate summary: OpenAI API key is missing.";
+        }
+        try {
+            appendMessage("Generating a summary of your check-in...", 'ai');
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-3.5-turbo",
+                    messages: [
+                        { role: "system", content: "You are a medical assistant AI that summarizes patient check-ins with clear, friendly advice." },
+                        { role: "user", content: `Here is the patient data:\n${userSummary}\nSummarize the key points and suggest actions in a friendly tone.` }
+                    ],
+                    temperature: 0.5,
+                    max_tokens: 300
+                })
+            });
+
+            const result = await response.json();
+            const aiReply = result.choices[0].message.content;
+            appendMessage(aiReply, 'ai');
+            return aiReply;
+        } catch (error) {
+            appendMessage("Failed to generate summary.", 'ai');
+            return "Failed to generate summary.";
+        }
     }
 
-    messages.scrollTop = messages.scrollHeight;
-  }
+    async function getMLPrediction(features) {
+        try {
+            appendMessage("I'm processing your data to get your risk prediction.", 'ai');
 
-  async function getOpenAIResponse(prompt) {
-    try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "You are a friendly medical assistant AI providing helpful and concise responses." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 150
-        })
-      });
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ features: features })
+            });
 
-      const result = await response.json();
-      return result.choices[0].message.content.trim();
-    } catch (error) {
-      return "Sorry, I encountered an error. Please try again.";
+            const data = await response.json();
+
+            if (response.ok) {
+                const riskScore = (data.risk_score * 100).toFixed(2);
+                const predClass = data.predicted_class;
+                
+                displayRiskPrediction(predClass, riskScore);
+                
+                const summaryText = await getLLMSummary(
+                    `Risk Score: ${riskScore}%, Predicted Class: ${predClass}, Vitals: ${JSON.stringify(features)}`
+                );
+                
+                // --- This part has been updated with logging ---
+                const saveResponse = await fetch("/save_data", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        summary: summaryText,
+                        risk_score: riskScore,
+                        predicted_class: predClass
+                    }),
+                });
+
+                const saveResult = await saveResponse.json();
+                console.log("Server response to save_data:", saveResult);
+                // --- End of updated code ---
+
+            } else {
+                appendMessage(`Failed to get risk score: ${data.error}. Please check your format.`, 'ai');
+                clearRiskPrediction();
+            }
+        } catch (error) {
+            appendMessage('An error occurred while getting the prediction. Please try again.', 'ai');
+            clearRiskPrediction();
+            console.error('getMLPrediction Error:', error);
+        }
     }
-  }
 
-  async function getLLMSummary(userSummary, messages) {
-    try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "You are a medical assistant AI that summarizes patient check-ins with clear, friendly advice." },
-            { role: "user", content: `Here is the patient data:\n${userSummary}\nSummarize the key points and suggest actions in a friendly tone.` }
-          ],
-          temperature: 0.5,
-          max_tokens: 300
-        })
-      });
-
-      const result = await response.json();
-      const aiReply = result.choices[0].message.content;
-      messages.innerHTML += `<p><strong>AI Summary:</strong> ${aiReply}</p>`;
-    } catch (error) {
-      messages.innerHTML += `<p><strong>AI Summary:</strong> Failed to generate summary.</p>`;
-    }
-  }
-
-  document.getElementById('chatInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      sendMessage();
-    }
-  });
 </script>
-</body>
-</html>
-

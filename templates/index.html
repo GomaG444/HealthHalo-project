@@ -9,7 +9,6 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-3xl shadow-xl">
 
-    <!-- Header -->
     <div class="text-center mb-6">
       <div class="flex justify-center items-center gap-2">
         <img src="{{ url_for('static', filename='images/logo.png') }}" class="h-8" alt="Logo">
@@ -18,42 +17,36 @@
       <p class="text-sm text-gray-600">Personalized AI-Driven Heart Disease Monitoring</p>
     </div>
 
-    <!-- Nav Tabs -->
     <div class="flex justify-around mb-5 text-sm font-medium text-blue-700">
       <span class="border-b-2 border-blue-600 pb-1">Dashboard</span>
       <a href="{{ url_for('handle_upload') }}" class="hover:underline">Upload Data</a>
       <a href="{{ url_for('chatbot') }}" class="hover:underline">Chat with AI</a>
     </div>
 
-    <!-- Card: ML Risk Prediction -->
-    <div class="bg-gray-100 rounded-xl p-4 mb-4">
+    <div id="risk-prediction-card" class="bg-gray-100 rounded-xl p-4 mb-4">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-blue-700">🧠</span>
+        <span class="text-blue-700"></span>
         <h2 class="font-semibold text-gray-800">ML Risk Prediction</h2>
       </div>
-      <p class="text-sm">Your readmission risk score is <strong>0.19</strong> – <span class="text-red-600 font-medium">High</span>.</p>
+      <p class="text-sm" id="prediction-text">Your readmission risk score is <strong>-</strong></p>
     </div>
 
-    <!-- Card: LSTM Analysis -->
     <div class="bg-gray-100 rounded-xl p-4 mb-4">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-blue-700">💙</span>
+        <span class="text-blue-700"></span>
         <h2 class="font-semibold text-gray-800">LSTM Analysis</h2>
       </div>
       <p class="text-sm">Irregular heart rate patterns detected <strong>3×</strong> in the past week.</p>
     </div>
 
-    <!-- Card: LLM Summary (dynamic) -->
-    <div class="bg-gray-100 rounded-xl p-4 mb-4">
+    <div id="llm-summary-card" class="bg-gray-100 rounded-xl p-4 mb-4">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-blue-700">💬</span>
+        <span class="text-blue-700"></span>
         <h2 class="font-semibold text-gray-800">LLM Summary</h2>
       </div>
-      <!-- Preserve line-breaks that may come from OpenAI -->
-      <p class="text-sm whitespace-pre-line">{{ llm_summary }}</p>
+      <p class="text-sm whitespace-pre-line" id="summary-text">Your latest health summary will appear here after your first check-in with the chatbot.</p>
     </div>
 
-    <!-- Upload Section (quick link) -->
     <div class="grid grid-cols-2 gap-4 mb-4">
       <div>
         <h3 class="text-sm font-semibold mb-1">⬆ Upload Data</h3>
@@ -64,7 +57,7 @@
         </a>
       </div>
       <div>
-        <h3 class="text-sm font-semibold mb-1">📋 Reports</h3>
+        <h3 class="text-sm font-semibold mb-1"> Reports</h3>
         <ul class="text-xs text-gray-700 space-y-1">
           <li><strong>Risk Score Trend:</strong> ⬆ Rising</li>
           <li><strong>HR Pattern Flags:</strong> 2 anomalies</li>
@@ -73,13 +66,48 @@
       </div>
     </div>
 
-    <!-- Check-in Prompt -->
     <a href="{{ url_for('chatbot') }}" class="block">
       <div class="bg-blue-50 rounded-xl p-3 text-center hover:bg-blue-100 transition-colors duration-200">
-        <p class="text-blue-800 font-medium">😐 Hi! How are you feeling today?</p>
+        <p class="text-blue-800 font-medium"> Hi! How are you feeling today?</p>
       </div>
     </a>
 
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', fetchLatestData);
+    
+    function fetchLatestData() {
+      fetch('/get_latest_data')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (Object.keys(data).length > 0) {
+            updateDashboard(data);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching latest data:', error);
+        });
+    }
+
+    function updateDashboard(data) {
+      const summaryTextElement = document.getElementById('summary-text');
+      const predictionTextElement = document.getElementById('prediction-text');
+
+      summaryTextElement.innerText = data.summary;
+
+      const riskClassText = data.predicted_class === 1 ? 'High' : 'Low';
+      const riskColorClass = data.predicted_class === 1 ? 'text-red-600' : 'text-green-600';
+      const riskScore = parseFloat(data.risk_score).toFixed(2);
+      
+      predictionTextElement.innerHTML = `Your readmission risk score is <strong>${riskScore}</strong> – <span class="${riskColorClass} font-medium">${riskClassText}</span>.`;
+    }
+  </script>
+
 </body>
 </html>

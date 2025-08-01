@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HealthHalo · Upload Data</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -12,32 +12,36 @@
     <!-- Header -->
     <div class="text-center mb-6">
       <div class="flex justify-center items-center gap-2">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" class="h-8" alt="Logo">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" class="h-8" alt="Logo" />
         <h1 class="text-2xl font-bold text-blue-900">Upload Data</h1>
       </div>
       <p class="text-sm text-gray-600">Upload a .csv file with your recent health readings.</p>
     </div>
 
     <!-- Upload form -->
-    <form action="{{ url_for('handle_upload') }}"
-          method="POST"
-          enctype="multipart/form-data"
-          class="space-y-4">
-
-      <input type="file"
-             name="file"
-             accept=".csv"
-             class="block w-full text-sm text-gray-700
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100"
-             required>
-
-      <button type="submit"
-              class="w-full bg-blue-600 text-white rounded-md px-4 py-2 text-sm
-                     hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <form
+      action="{{ url_for('handle_upload') }}"
+      method="POST"
+      enctype="multipart/form-data"
+      class="space-y-4"
+    >
+      <input
+        type="file"
+        name="file"
+        accept=".csv"
+        class="block w-full text-sm text-gray-700
+               file:mr-4 file:py-2 file:px-4
+               file:rounded-md file:border-0
+               file:text-sm file:font-semibold
+               file:bg-blue-50 file:text-blue-700
+               hover:file:bg-blue-100"
+        required
+      />
+      <button
+        type="submit"
+        class="w-full bg-blue-600 text-white rounded-md px-4 py-2 text-sm
+               hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      >
         Upload &amp; Analyse
       </button>
     </form>
@@ -47,12 +51,40 @@
       <p class="mt-4 text-center text-green-700 text-sm">{{ message }}</p>
     {% endif %}
 
-    <!-- Back to dashboard -->
-    <a href="{{ url_for('dashboard') }}"
-       class="block mt-6 text-center text-blue-600 text-sm hover:underline">
-      ← Back to Dashboard
-    </a>
+    <!-- Health summary -->
+    {% if summary %}
+      <div class="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
+        <h2 class="text-lg font-semibold text-blue-900 mb-2">Health Summary</h2>
+        <p class="text-sm text-gray-800">{{ summary }}</p>
+      </div>
+    {% endif %}
 
+    <!-- Prediction results -->
+    {% if prediction %}
+      <div class="mt-6 p-4 bg-green-50 rounded-md border border-green-200">
+        <h2 class="text-lg font-semibold text-green-900 mb-2">Prediction Results</h2>
+        <ul class="list-disc list-inside text-sm text-gray-800">
+          <li><strong>Low Risk Count:</strong> {{ prediction.low_risk }}</li>
+          <li><strong>High Risk Count:</strong> {{ prediction.high_risk }}</li>
+        </ul>
+      </div>
+    {% endif %}
+
+    <!-- Average risk score -->
+    {% if avg_risk_score is defined %}
+      <div class="mt-6 p-4 bg-yellow-50 rounded-md border border-yellow-200 text-yellow-900">
+        <h2 class="text-lg font-semibold mb-2">Average Risk Score</h2>
+        <p class="text-sm">Estimated probability of high risk across all entries:</p>
+        <p class="text-2xl font-bold">{{ avg_risk_score }}</p>
+      </div>
+    {% endif %}
+
+    <!-- Back to dashboard -->
+    <a
+      href="{{ url_for('dashboard') }}"
+      class="block mt-6 text-center text-blue-600 text-sm hover:underline"
+      >← Back to Dashboard</a
+    >
   </div>
 </body>
 </html>
