@@ -5,7 +5,7 @@ import joblib
 from dotenv import load_dotenv
 from openai import OpenAI
 import json
-
+import re
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 
@@ -35,11 +35,9 @@ def latest_summary_fallback():
     if os.path.exists(path):
         with open(path, "r") as fp:
             data = json.load(fp)
-            # Ensure 'lstm_summary' key exists, provide default if missing
             if "lstm_summary" not in data:
                 data["lstm_summary"] = "No recent health trends available."
             return data
-    # Return a default empty state
     return {
         "summary": "No recent summary yet.",
         "risk_score": None,
@@ -68,16 +66,11 @@ model = load_ml_model()
 
 @app.route("/")
 def dashboard():
-    """Dashboard page with latest data injected for initial page load."""
     summary_data = latest_summary_fallback()
-    
-    # You can dynamically update or generate lstm_summary here if you want
-    # For now, it uses the stored value or default from latest_summary_fallback
     return render_template("index.html", data=summary_data)
 
 @app.route("/upload", methods=["GET", "POST"])
 def handle_upload():
-    """GET: show form · POST: ingest CSV, call OpenAI, store summary & predict risk."""
     if request.method == "GET":
         return render_template("upload.html")
 
@@ -114,18 +107,16 @@ def handle_upload():
         )
         summary_text = chat.choices[0].message.content.strip()
 
-        # Calculate average risk score from CSV
         X = df.drop('target', axis=1) if 'target' in df.columns else df
         risk_probs = model.predict_proba(X)[:, 1]
         avg_risk_score = round(risk_probs.mean() * 100, 2)
-        avg_pred_class = 1 if avg_risk_score > 50 else 0 # A simple threshold for high/low
+        avg_pred_class = 1 if avg_risk_score > 50 else 0
 
-        # Save to the same JSON file as the chatbot, add placeholder lstm_summary
         data_to_save = {
             "summary": summary_text,
             "risk_score": avg_risk_score,
             "predicted_class": avg_pred_class,
-            "lstm_summary": "Stable heart rate and blood pressure trends."  # Placeholder text
+            "lstm_summary": "Stable heart rate and blood pressure trends."
         }
         path = os.path.join(SUMMARY_DIR, "latest.json")
         with open(path, "w") as fp:
@@ -144,13 +135,84 @@ def handle_upload():
 
 @app.route("/chatbot")
 def chatbot():
-    """Chatbot page (passes key to browser JS)."""
     key = os.getenv("OPENAI_API_KEY", "")
     return render_template("chatbot.html", openai_api_key=key)
 
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        data = request.get_json()
+        user_message = data.get("message", "").strip()
+
+        # Load latest saved data
+        summary_data = latest_summary_fallback()
+        previous_risk = summary_data.get("risk_score")
+        predicted_class = summary_data.get("predicted_class")
+        summary_text = summary_data.get("summary")
+        previous_lstm_summary = summary_data.get("lstm_summary")
+
+        # Friendly greeting
+        friendly_greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"]
+        user_lower = user_message.lower()
+        if any(greet in user_lower for greet in friendly_greetings):
+            ai_reply = "Hello! How are you feeling today? Any heart-related updates like BP, heart rate, or missed medication?"
+            risk_score = previous_risk
+            lstm_summary = previous_lstm_summary
+        else:
+            # Build system prompt with latest context
+            system_prompt = (
+                "You are a helpful heart health assistant. "
+                "The patient may provide recent health data such as blood pressure, heart rate, "
+                "medication adherence, fatigue, or other symptoms. "
+                "Based on this information, estimate the patient's readmission risk (0-100%) and summarize any trends in heart health. "
+                "Always return a JSON object in this format: "
+                "{\"reply\": \"friendly message to user\", \"risk_score\": 82, \"lstm_summary\": \"summary of heart trends\"}. "
+                "If the user does not provide numeric data, base estimates on previous saved data. "
+                "If the user asks unrelated questions, politely redirect them to heart health."
+            )
+            if previous_risk is not None:
+                system_prompt += f" The patient's last known readmission risk was {previous_risk:.2f}%."
+
+            # GPT call
+            chat_response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                temperature=0.7,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message},
+                ],
+            )
+            ai_raw = chat_response.choices[0].message.content.strip()
+
+            # Try to parse JSON returned by GPT
+            try:
+                # Ensure ai_raw is JSON-like
+                ai_json = json.loads(ai_raw)
+                ai_reply = ai_json.get("reply", ai_raw)
+                risk_score = ai_json.get("risk_score", previous_risk)
+                lstm_summary = ai_json.get("lstm_summary", previous_lstm_summary)
+            except json.JSONDecodeError:
+                # Fallback if GPT does not return JSON
+                ai_reply = ai_raw
+                risk_score = previous_risk
+                lstm_summary = previous_lstm_summary
+
+        return jsonify({
+            "reply": ai_reply,
+            "summary": summary_text,
+            "risk_score": risk_score,
+            "predicted_class": predicted_class,
+            "lstm_summary": lstm_summary
+        })
+
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return jsonify({"error": "An error occurred processing your request."}), 500
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return jsonify({"error": "An error occurred processing your request."}), 500
 @app.route("/predict", methods=["POST"])
 def predict():
-    """API endpoint returning risk score & class from a pre-loaded model."""
     if model is None:
         return jsonify({"error": "ML model not loaded."}), 500
 
@@ -161,7 +223,6 @@ def predict():
 
         user_features = data['features']
         
-        # Expected features with defaults
         required_features = {
             'age': 55, 'sex': 1, 'cp': 0, 'trestbps': 120, 'chol': 200, 'fbs': 0,
             'restecg': 1, 'thalach': 150, 'exang': 0, 'oldpeak': 1.0, 'slope': 2,
@@ -169,7 +230,6 @@ def predict():
         }
 
         input_data = required_features.copy()
-
         if 'age' in user_features: input_data['age'] = user_features['age']
         if 'sex' in user_features: input_data['sex'] = user_features['sex']
         if 'cholesterol' in user_features: input_data['chol'] = user_features['cholesterol']
@@ -188,21 +248,23 @@ def predict():
 
 @app.route("/save_data", methods=["POST"])
 def save_data():
-    """Endpoint to receive and save both LLM summary and ML prediction from the chatbot."""
     try:
         data = request.get_json()
+        print("Received data in /save_data:", data)
         summary_text = data.get("summary")
         risk_score = data.get("risk_score")
         predicted_class = data.get("predicted_class")
+        lstm_summary = data.get("lstm_summary", "Stable heart rate and blood pressure trends.")
 
-        if not all([summary_text, risk_score, predicted_class is not None]):
+        if summary_text is None or risk_score is None or predicted_class is None:
+            print("Missing data detected")
             return jsonify({"status": "error", "message": "Missing data"}), 400
 
         summary_data = {
             "summary": summary_text,
             "risk_score": risk_score,
             "predicted_class": predicted_class,
-            "lstm_summary": "Stable heart rate and blood pressure trends."  # Keep consistent placeholder
+            "lstm_summary": lstm_summary
         }
         
         path = os.path.join(SUMMARY_DIR, "latest.json")
@@ -216,14 +278,11 @@ def save_data():
 
 @app.route("/get_latest_data")
 def get_latest_data():
-    """Returns the latest saved data for real-time dashboard updates."""
     data = latest_summary_fallback()
     return jsonify(data)
 
-# --- New reports page route ---
 @app.route("/reports")
 def reports():
-    # TODO: Replace with live data integration later
     report_data = {
         "risk_trend": "⬆ Rising",
         "hr_flags": 2,
@@ -231,6 +290,11 @@ def reports():
     }
     return render_template("reports.html", report=report_data)
 
+@app.route("/test_post", methods=["POST"])
+def test_post():
+    data = request.get_json()
+    print("Test POST received data:", data)
+    return jsonify({"status": "success", "data": data}), 200
 
 if __name__ == "__main__":
     print("App.py folder:", BASE_DIR)
@@ -238,4 +302,4 @@ if __name__ == "__main__":
         print("✅ ML model loaded successfully.")
     else:
         print("❌ Failed to load ML model.")
-    app.run(debug=True)
+    app.run(debug=True, port=5050)

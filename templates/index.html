@@ -10,6 +10,7 @@
 
   <div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-3xl shadow-xl">
 
+    <!-- Header -->
     <div class="text-center mb-6">
       <div class="flex justify-center items-center gap-2">
         <img src="{{ url_for('static', filename='images/logo.png') }}" class="h-8" alt="Logo" />
@@ -18,6 +19,7 @@
       <p class="text-sm text-gray-600">Your health summary at a glance</p>
     </div>
 
+    <!-- Navigation -->
     <div class="flex justify-around mb-5 text-sm font-medium text-blue-700">
       <a href="{{ url_for('dashboard') }}" class="border-b-2 border-blue-600 pb-1">Dashboard</a>
       <a href="{{ url_for('handle_upload') }}" class="hover:underline">Upload Data</a>
@@ -25,26 +27,59 @@
       <a href="{{ url_for('reports') }}" class="hover:underline">Reports</a>
     </div>
 
-    <div class="mb-4 p-4 bg-gray-100 rounded-lg shadow-inner min-h-[150px]">
+    <!-- Latest Summary -->
+    <div class="mb-4 p-4 bg-gray-100 rounded-xl shadow-inner min-h-[150px]">
       <h2 class="text-xl font-semibold mb-2">Latest Summary</h2>
-      <p>{{ data.summary }}</p>
+      <p id="summary">{{ data.summary }}</p>
     </div>
 
-    <div class="mb-4 p-4 bg-gray-100 rounded-lg shadow-inner">
+    <!-- Risk Score -->
+    <div class="mb-4 p-4 bg-gray-100 rounded-xl shadow-inner">
       <h2 class="text-xl font-semibold mb-2">Risk Score</h2>
       {% if data.risk_score is not none %}
-        <p class="text-lg font-bold">{{ data.risk_score }}%</p>
+        <p id="risk_score" class="text-lg font-bold">{{ data.risk_score }}%</p>
       {% else %}
-        <p>No risk score available</p>
+        <p id="risk_score">No risk score available</p>
       {% endif %}
     </div>
 
-    <div class="mb-4 p-4 bg-gray-100 rounded-lg shadow-inner">
+    <!-- Health Trend Summary -->
+    <div class="mb-6 p-4 bg-gray-100 rounded-xl shadow-inner">
       <h2 class="text-xl font-semibold mb-2">Health Trend Summary</h2>
-      <p>{{ data.lstm_summary or "No recent health trends available." }}</p>
+      <p id="lstm_summary">{{ data.lstm_summary or "No recent health trends available." }}</p>
     </div>
 
+    <!-- ✅ Chatbot Check-in Prompt (matches theme) -->
+    <a href="{{ url_for('chatbot') }}" class="block">
+      <div class="mb-4 p-4 bg-gray-100 rounded-xl shadow-inner hover:bg-blue-50 transition-colors duration-200">
+        <h2 class="text-lg font-semibold text-blue-800 mb-1">💬 Hi! How are you feeling today?</h2>
+        <p class="text-xs text-gray-600">Tap to check in with your AI health assistant</p>
+      </div>
+    </a>
+
   </div>
+
+  <script>
+  async function fetchLatestData() {
+    try {
+      const response = await fetch('/get_latest_data');
+      if (!response.ok) throw new Error('Network response was not OK');
+      const data = await response.json();
+
+      document.getElementById('summary').innerText = data.summary || 'No summary yet.';
+      document.getElementById('risk_score').innerText = 
+        data.risk_score !== null ? data.risk_score + '%' : 'No risk score available';
+      document.getElementById('lstm_summary').innerText = 
+        data.lstm_summary || 'No recent health trends available.';
+    } catch (err) {
+      console.error('Failed to fetch latest data:', err);
+    }
+  }
+
+  // Fetch immediately, then every 30 seconds
+  fetchLatestData();
+  setInterval(fetchLatestData, 30000);
+  </script>
 
 </body>
 </html>
