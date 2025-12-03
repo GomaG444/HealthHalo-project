@@ -5,7 +5,6 @@ import joblib
 from dotenv import load_dotenv
 from openai import OpenAI
 import json
-import re
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 
@@ -91,27 +90,59 @@ def handle_upload():
         df = pd.read_csv(save_path)
         from utilities import df_quick_overview
         digest = df_quick_overview(df)
-        
+
+        # --- ML risk counts (if predict_csv exists) ---
         if predict_csv:
             risk_counts = predict_csv(save_path)
         else:
             risk_counts = None
-        
+
+        # --- LLM summary ---
         chat = client.chat.completions.create(
             model="gpt-3.5-turbo",
             temperature=0.4,
             messages=[
-                {"role": "system", "content": "You are a clinical data scientist. Turn raw CSV statistics into a concise, friendly heart-health summary for the patient. Avoid jargon."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a clinical data scientist. Summarize the patient CSV data "
+                        "into a short, friendly heart-health report suitable for a patient. "
+                        "Focus only on important trends and anomalies. "
+                        "Avoid repeating information and keep it concise (3-4 sentences max). "
+                        "Do not mention exact ages or ranges unless critical. "
+                        "Avoid jargon and unnecessary statistics."
+                    )
+                },
                 {"role": "user", "content": digest},
             ],
         )
         summary_text = chat.choices[0].message.content.strip()
 
-        X = df.drop('target', axis=1) if 'target' in df.columns else df
-        risk_probs = model.predict_proba(X)[:, 1]
+        # --- Map CSV for logistic regression ---
+        df_mapped = pd.DataFrame()
+        df_mapped['age'] = df['age']
+        df_mapped['sex'] = df['sex'].map({'M': 1, 'F': 0})
+        df_mapped['cp'] = 0
+        df_mapped['trestbps'] = df['systolic']
+        df_mapped['chol'] = df['cholesterol']
+        df_mapped['fbs'] = 0
+        df_mapped['restecg'] = 0
+        df_mapped['thalach'] = df['heart_rate']
+        df_mapped['exang'] = 0
+        df_mapped['oldpeak'] = 0.0
+        df_mapped['slope'] = 2
+        df_mapped['ca'] = 0
+        df_mapped['thal'] = 2
+
+        df_mapped = df_mapped[['age','sex','cp','trestbps','chol','fbs','restecg',
+                               'thalach','exang','oldpeak','slope','ca','thal']]
+
+        # --- ML predictions ---
+        risk_probs = model.predict_proba(df_mapped)[:, 1]
         avg_risk_score = round(risk_probs.mean() * 100, 2)
         avg_pred_class = 1 if avg_risk_score > 50 else 0
 
+        # --- Save summary and risk to JSON ---
         data_to_save = {
             "summary": summary_text,
             "risk_score": avg_risk_score,
@@ -129,9 +160,11 @@ def handle_upload():
             prediction=risk_counts,
             avg_risk_score=avg_risk_score,
         )
+
     except Exception as exc:
         print(f"Error during upload processing: {exc}")
         return render_template("upload.html", message=f"An error occurred: {exc}")
+
 
 @app.route("/chatbot")
 def chatbot():
@@ -144,14 +177,12 @@ def chat():
         data = request.get_json()
         user_message = data.get("message", "").strip()
 
-        # Load latest saved data
         summary_data = latest_summary_fallback()
         previous_risk = summary_data.get("risk_score")
         predicted_class = summary_data.get("predicted_class")
         summary_text = summary_data.get("summary")
         previous_lstm_summary = summary_data.get("lstm_summary")
 
-        # Friendly greeting
         friendly_greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"]
         user_lower = user_message.lower()
         if any(greet in user_lower for greet in friendly_greetings):
@@ -159,7 +190,6 @@ def chat():
             risk_score = previous_risk
             lstm_summary = previous_lstm_summary
         else:
-            # Build system prompt with latest context
             system_prompt = (
                 "You are a helpful heart health assistant. "
                 "The patient may provide recent health data such as blood pressure, heart rate, "
@@ -173,7 +203,6 @@ def chat():
             if previous_risk is not None:
                 system_prompt += f" The patient's last known readmission risk was {previous_risk:.2f}%."
 
-            # GPT call
             chat_response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 temperature=0.7,
@@ -184,15 +213,12 @@ def chat():
             )
             ai_raw = chat_response.choices[0].message.content.strip()
 
-            # Try to parse JSON returned by GPT
             try:
-                # Ensure ai_raw is JSON-like
                 ai_json = json.loads(ai_raw)
                 ai_reply = ai_json.get("reply", ai_raw)
                 risk_score = ai_json.get("risk_score", previous_risk)
                 lstm_summary = ai_json.get("lstm_summary", previous_lstm_summary)
             except json.JSONDecodeError:
-                # Fallback if GPT does not return JSON
                 ai_reply = ai_raw
                 risk_score = previous_risk
                 lstm_summary = previous_lstm_summary
@@ -208,9 +234,7 @@ def chat():
     except Exception as e:
         print(f"Chat error: {e}")
         return jsonify({"error": "An error occurred processing your request."}), 500
-    except Exception as e:
-        print(f"Chat error: {e}")
-        return jsonify({"error": "An error occurred processing your request."}), 500
+
 @app.route("/predict", methods=["POST"])
 def predict():
     if model is None:
@@ -250,14 +274,12 @@ def predict():
 def save_data():
     try:
         data = request.get_json()
-        print("Received data in /save_data:", data)
         summary_text = data.get("summary")
         risk_score = data.get("risk_score")
         predicted_class = data.get("predicted_class")
         lstm_summary = data.get("lstm_summary", "Stable heart rate and blood pressure trends.")
 
         if summary_text is None or risk_score is None or predicted_class is None:
-            print("Missing data detected")
             return jsonify({"status": "error", "message": "Missing data"}), 400
 
         summary_data = {
@@ -281,20 +303,27 @@ def get_latest_data():
     data = latest_summary_fallback()
     return jsonify(data)
 
-@app.route("/reports")
-def reports():
-    report_data = {
-        "risk_trend": "⬆ Rising",
-        "hr_flags": 2,
-        "recent_symptoms": "Fatigue, missed meds"
-    }
-    return render_template("reports.html", report=report_data)
-
 @app.route("/test_post", methods=["POST"])
 def test_post():
     data = request.get_json()
     print("Test POST received data:", data)
     return jsonify({"status": "success", "data": data}), 200
+
+# --- ADD THIS: Reports route ---
+@app.route("/reports")
+def reports():
+    # Get the latest saved summary
+    summary = latest_summary_fallback()
+    
+    # Map keys to what the template expects
+    report = {
+        "risk_trend": f"{summary.get('risk_score', 'N/A')}%",
+        "hr_flags": summary.get("predicted_class", "No anomalies"),
+        "recent_symptoms": summary.get("summary", "No recent symptoms")
+    }
+    
+    return render_template("reports.html", report=report)
+
 
 if __name__ == "__main__":
     print("App.py folder:", BASE_DIR)
